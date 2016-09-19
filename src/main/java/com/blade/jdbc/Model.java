@@ -261,6 +261,9 @@ public class Model extends HashMap<String, Object> {
 		Object[] paramValues = vlaues.toArray(new Object[vlaues.size()]);
 		query.withParams(paramValues);
 		int result = query.executeUpdate().getResult();
+		if(cached){
+			Base.cache.del(this.table() + "_detail");
+		}
 		this.clear();
 		return result;
 	}
@@ -303,6 +306,9 @@ public class Model extends HashMap<String, Object> {
 		Object[] paramValues = vlaues.toArray(new Object[vlaues.size()]);
 		query.withParams(paramValues);
 		int result = query.executeUpdate().getResult();
+		if(cached){
+			Base.cache.del(this.table() + "_detail");
+		}
 		this.clear();
 		return result;
 	}
