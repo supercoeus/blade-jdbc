@@ -62,6 +62,16 @@ public class Model extends HashMap<String, Object> {
 	}
 	
 	/**
+	 * enabled cache
+	 * @param cached
+	 * @return
+	 */
+	public Model cached(boolean cached){
+		this.cached = cached;
+		return this;
+	}
+	
+	/**
 	 * where
 	 * @param name
 	 * @param value
@@ -534,7 +544,7 @@ public class Model extends HashMap<String, Object> {
 	public String pkName() {
 		return clazz.getAnnotation(Table.class).pk();
 	}
-
+	
 	public Class<? extends Model> clazz() {
 		return this.clazz;
 	}

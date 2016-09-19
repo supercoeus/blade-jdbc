@@ -45,11 +45,5 @@ public @interface Table {
      */
     String schema() default "";
     
-    /**
-     * open the table query cache
-     * @return
-     */
-    boolean cached() default true;
-    
     UniqueConstraint[] uniqueConstraints() default {};
 }
