@@ -36,7 +36,9 @@ public class Model extends HashMap<String, Object> {
 	private Connection connection;
 	
 	private Query query;
-
+	
+	private boolean cached = Base.cache != null;
+	
 	private Dialect dialect = new DefaultDialect();
 	
 	private Map<ParamKey, Object> params = new TreeMap<ParamKey, Object>();
@@ -49,54 +51,106 @@ public class Model extends HashMap<String, Object> {
 		this.sql2o = Base.database();
 	}
 	
+	/**
+	 * create database by name
+	 * @param name
+	 * @return
+	 */
 	public Model db(String name){
-		this.sql2o = Base.database();
+		this.sql2o = Base.database(name);
 		return this;
 	}
 	
+	/**
+	 * where
+	 * @param name
+	 * @param value
+	 * @return
+	 */
 	public Model where(String name, Object value) {
-		int index = params.size() + 1;
-		if(name.indexOf('?') != -1){
-			String[] opt = QueryKit.getOpts(name);
-			this.params.put(new ParamKey(index, opt[0], opt[1]), value);
-		} else {
-			this.params.put(new ParamKey(index, name), value);
+		if(null != name && null != value){
+			int index = params.size() + 1;
+			if(name.indexOf('?') != -1){
+				String[] opt = QueryKit.getOpts(name);
+				this.params.put(new ParamKey(index, opt[0], opt[1]), value);
+			} else {
+				this.params.put(new ParamKey(index, name), value);
+			}
 		}
 		return this;
 	}
-
+	
+	/**
+	 * where 
+	 * @param name
+	 * @param opt
+	 * @param value
+	 * @return
+	 */
 	public Model where(String name, String opt, Object value) {
-		int index = params.size() + 1;
-		this.params.put(new ParamKey(index, name, opt), value);
-		return this;
-	}
-	
-	public Model where(String wheres, Object... values) {
-		int index = params.size() + 1;
-		ParamKey[] params = QueryKit.getParams(index, wheres);
-		for (int i = 0, len = values.length; i < len; i++) {
-			ParamKey paramKey = params[i];
-			Object value = values[i];
-			this.params.put(paramKey, value);
+		if(null != name && null != opt && null != value){
+			int index = params.size() + 1;
+			this.params.put(new ParamKey(index, name, opt), value);
 		}
 		return this;
 	}
 	
+	/**
+	 * where
+	 * @param wheres
+	 * @param values
+	 * @return
+	 */
+	public Model where(String wheres, Object... values) {
+		if(null != wheres && null != values){
+			int index = params.size() + 1;
+			ParamKey[] params = QueryKit.getParams(index, wheres);
+			for (int i = 0, len = values.length; i < len; i++) {
+				ParamKey paramKey = params[i];
+				Object value = values[i];
+				this.params.put(paramKey, value);
+			}
+		}
+		return this;
+	}
+	
+	/**
+	 * custom sql
+	 * @param sql
+	 * @return
+	 */
 	public Model sql(String sql){
 		this.sql = sql;
 		return this;
 	}
 	
+	/**
+	 * custom sql
+	 * @param sql
+	 * @param values
+	 * @return
+	 */
 	public Model sql(String sql, Object...values){
 		this.sql = sql;
 		return this;
 	}
 	
+	/**
+	 * set value
+	 * @param name
+	 * @param value
+	 * @return
+	 */
 	public Model set(String name, Object value) {
 		this.put(name, value);
 		return this;
 	}
 	
+	/**
+	 * get value
+	 * @param name
+	 * @return
+	 */
 	public <T> T get(String name) {
 		Object value = super.get(name);
 		if(null != value){
@@ -105,6 +159,10 @@ public class Model extends HashMap<String, Object> {
 		return null;
 	}
 	
+	/**
+	 * save
+	 * @return
+	 */
 	public <K> K save() {
 		String sql = dialect.getSaveSql(this);
 		LOGGER.debug("Preparing  => {}", sql);
@@ -126,6 +184,9 @@ public class Model extends HashMap<String, Object> {
 		return k;
 	}
 	
+	/**
+	 * add to batch
+	 */
 	public void addToBatch(){
 		if(null == query){
 			String sql = dialect.getSaveSql(this);
@@ -140,6 +201,10 @@ public class Model extends HashMap<String, Object> {
 		this.clear();
 	}
 	
+	/**
+	 * save batch
+	 * @return
+	 */
 	public int[] saveBatch(){
 		if(null != query){
 			int[] result = query.executeBatch().getBatchResult();
@@ -150,6 +215,10 @@ public class Model extends HashMap<String, Object> {
 		return null;
 	}
 	
+	/**
+	 * update
+	 * @return
+	 */
 	public int update() {
 		String sql = dialect.getUpdateSql(this);
 		LOGGER.debug("Preparing  => {}", sql);
@@ -186,10 +255,23 @@ public class Model extends HashMap<String, Object> {
 		return result;
 	}
 	
-	public void execute() {
-		
+	/**
+	 * update by id
+	 * @param id
+	 * @return
+	 */
+	public int updateById(Serializable id) {
+		this.where(this.pkName(), id);
+		if(cached){
+			Base.cache.hdel(this.table() + "_detail", id.toString());
+		}
+		return update();
 	}
-
+	
+	/**
+	 * delete
+	 * @return
+	 */
 	public int delete(){
 		String sql = dialect.getDeleteSql(this);
 		LOGGER.debug("Preparing  => {}", sql);
@@ -215,6 +297,23 @@ public class Model extends HashMap<String, Object> {
 		return result;
 	}
 	
+	/**
+	 * delete by id
+	 * @param id
+	 * @return
+	 */
+	public int deleteById(Serializable id) {
+		this.where(this.pkName(), id);
+		if(cached){
+			Base.cache.hdel(this.table() + "_detail", id.toString());
+		}
+		return delete();
+	}
+	
+	/**
+	 * begin transaction
+	 * @param atomTx
+	 */
 	public void tx(AtomTx atomTx){
 		this.connection = sql2o.beginTransaction();
 		try {
@@ -229,19 +328,38 @@ public class Model extends HashMap<String, Object> {
 		}
 	}
 	
+	/**
+	 * order by
+	 * @param order
+	 * @return
+	 */
 	public Model order(String order){
 		this.order = order;
 		return this;
 	}
 	
+	/**
+	 * return all
+	 * @return
+	 */
 	public <T extends Model> List<T> all() {
 		return this.list(null);
 	}
 
+	/**
+	 * return list
+	 * @return
+	 */
 	public <T extends Model> List<T> list() {
 		return this.list(this.sql);
 	}
 	
+	/**
+	 * search list
+	 * 
+	 * @param sql
+	 * @return
+	 */
 	private <T extends Model> List<T> list(String sql) {
 		
 		String querySql = dialect.getQuerySql(sql, this);
@@ -261,6 +379,13 @@ public class Model extends HashMap<String, Object> {
 		return list;
 	}
 	
+	/**
+	 * page search
+	 * 
+	 * @param page
+	 * @param limit
+	 * @return
+	 */
 	public <T extends Model> Paginator<T> page(int page, int limit) {
 		// query count
 		long total = this.count(false);
@@ -273,12 +398,34 @@ public class Model extends HashMap<String, Object> {
 		return pager;
 	}
 	
+	/**
+	 * find by id
+	 * 
+	 * @param pk
+	 * @return
+	 */
 	public <T extends Model> T findById(Serializable pk) {
+		T model = null;
+		if(cached){
+			model = (T) Base.cache.hget(this.table() + "_detail", pk.toString());
+			if(null != model){
+				return model;
+			}
+		}
 		int index = params.size() + 1;
 		this.params.put(new ParamKey(index, this.pkName()), pk);
-		return this.findOne();
+		model = this.findOne();
+		if(cached && null != model){
+			Base.cache.hset(this.table() + "_detail", pk.toString(), model, 3000);
+		}
+		return model;
 	}
 	
+	/**
+	 * find one
+	 * 
+	 * @return
+	 */
 	public <T extends Model> T findOne() {
 		String sql = dialect.getQueryOneSql(this.sql, this);
 		LOGGER.debug("Preparing  => {}", sql);
@@ -303,10 +450,19 @@ public class Model extends HashMap<String, Object> {
 		return null;
 	}
 	
+	/**
+	 * search count
+	 * @return
+	 */
 	public int count(){
 		return this.count(true);
 	}
 	
+	/**
+	 * search count
+	 * @param clear
+	 * @return
+	 */
 	public int count(boolean clear){
 		String sql = dialect.getQueryCountSql(this.sql, this);
 		LOGGER.debug("Preparing  => {}", sql);
@@ -334,7 +490,6 @@ public class Model extends HashMap<String, Object> {
 	}
 	
 	/** meta data **/
-	
 	public String getString(String key){
 		Object value = this.get(key);
 		return null != value ? value.toString() : null;

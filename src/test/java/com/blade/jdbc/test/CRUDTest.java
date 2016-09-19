@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.junit.Test;
 
+import com.blade.jdbc.Base;
 import com.blade.jdbc.Paginator;
 import com.blade.jdbc.model.Person;
 import com.blade.jdbc.tx.AtomTx;
@@ -92,8 +93,18 @@ public class CRUDTest extends BaseTest {
 
 	@Test
 	public void testQuery3() {
+		Base.enableCache();
 		Person p = new Person();
-		Person person = p.findById(108);
+		Person person = p.findById(103);
+		System.out.println(person);
+		person = p.findById(103);
+		System.out.println(person);
+		
+		p.set("last_name", "11");
+		p.updateById(103);
+		person = p.findById(103);
+		System.out.println(person);
+		person = p.findById(103);
 		System.out.println(person);
 	}
 

@@ -7,10 +7,23 @@ import javax.sql.DataSource;
 
 import org.sql2o.Sql2o;
 
+import com.blade.jdbc.cache.Cache;
+import com.blade.jdbc.cache.DefaultCache;
+
 public final class Base {
 
 	public static Map<String, Sql2o> sql2oMap = new HashMap<String, Sql2o>(8);
-
+	
+	static Cache cache;
+	
+	public static void setCache(Cache cache_){
+		cache = cache_;
+	}
+	
+	public static void enableCache(){
+		cache = new DefaultCache();
+	}
+	
 	public static void open(String url, String user, String password) {
 		sql2oMap.put(Const.DEFAULT_DB_NAME, new Sql2o(url, user, password));
 	}
